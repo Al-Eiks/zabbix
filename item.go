@@ -154,3 +154,257 @@ func (api *API) ItemsDeleteByIds(ids []string) (err error) {
 	}
 	return
 }
+
+// Wrapper for item.get https://www.zabbix.com/documentation/2.0/manual/appendix/api/item/get
+func (api *API) GetInterfaceItemProd (nameVoisin string, params Params) (items []string, err error) {
+        if _, present := params["output"]; !present {
+                params["output"] = "extend"
+        }
+        response, err := api.CallWithError("item.get", params)
+        if err != nil {
+                return
+        }
+        result := response.Result.([]interface{})
+        for _, i := range result {
+                tmp := i.(map[string]interface{})
+                if strings.Contains(tmp["key_"].(string), "alias") {
+                        parser := strings.Contains(tmp["prevvalue"].(string), nameVoisin)
+                        p1 := strings.Contains(nameVoisin, "PRDNETRHP")
+                        p2 := strings.Contains(tmp["prevvalue"].(string), "PRDNETRHP")
+                        if ((parser) || ((p1) && (p2))) {
+                                testAlias := strings.Contains(tmp["key_"].(string), "alias_admin")
+                                testAlias2 := strings.Contains(tmp["key_"].(string), "alias_prod")
+                                if ((testAlias) || (testAlias2)) {
+                                        continue
+                                } else {
+                                        itemKey := tmp["key_"].(string)
+                                        itemKey = strings.TrimPrefix(itemKey, "alias[")
+                                        itemKey = strings.TrimPrefix(itemKey, "alias_admin[")
+                                        itemKey = strings.TrimPrefix(itemKey, "alias_prod[")
+                                        itemKey = strings.TrimSuffix(itemKey, "]")
+                                        items = append(items, itemKey)
+                                }
+                        }
+                }
+        }
+        n := len(items)
+        if n == 1 {
+                return
+        } else {
+                var items2 []string
+                for i, _ := range items {
+                        test2 := strings.Contains(items[i], "GigabitEthernet")
+                        if test2  {
+                                test4 := StringInSlice(items2, "Aggregation")
+                                if test4 == false {
+                                        items2 = append(items2, items[i])
+                                }
+                        } else {
+                                test3 := StringInSlice(items2, "GigabitEthernet")
+                                if test3 {
+                                        items2 = nil
+                                }
+                        items2 = append(items2, items[i])
+                        }
+                }
+             items = items2
+        }
+        return
+}
+
+//permet de tester le contenu d'une slice
+func SliceContains(slice []string, item string) bool {
+    set := make(map[string]struct{}, len(slice))
+    for _, s := range slice {
+        set[s] = struct{}{}
+    }
+    _, ok := set[item]
+    return ok
+}
+
+func StringInSlice(list []string, a string) bool {
+    for _, b := range list {
+        if strings.Contains(b, a) {
+            return true
+        }
+    }
+    return false
+}
+
+
+func (api *API) GetItemId(key string, params Params) (itemId string, err error) {
+        if _, present := params["output"]; !present {
+                params["output"] = "extend"
+        }
+        response, err := api.CallWithError("item.get", params)
+        if err != nil {
+                fmt.Println(err.Error())
+                return
+        }
+        result := response.Result.([]interface{})
+        for _, i := range result {
+                tmp := i.(map[string]interface{})
+                if tmp["key_"].(string) == key {
+                        itemId = tmp["itemid"].(string)
+                }
+        }
+        return
+}
+
+func (api *API) GetInterfaces(nameVoisin string, params Params) (items []string, err error) {
+        if _, present := params["output"]; !present {
+                params["output"] = "extend"
+        }
+        response, err := api.CallWithError("item.get", params)
+        if err != nil {
+                fmt.Println(err.Error())
+                return
+        }
+        result := response.Result.([]interface{})
+        for _, i := range result {
+                tmp := i.(map[string]interface{})
+                if strings.Contains(tmp["key_"].(string), "alias") {
+                        fmt.Println(tmp["key_"].(string), tmp["prevvalue"].(string))
+                        testAlias := strings.Contains(tmp["key_"].(string), "alias_admin")
+                        testAlias2 := strings.Contains(tmp["key_"].(string), "alias_prod")
+                        if ((testAlias) || (testAlias2)) {
+                                continue
+                        }
+                        item := tmp["key_"].(string)
+                        item = strings.TrimPrefix(item, "alias[")
+                        item = strings.TrimPrefix(item, "alias_admin[")
+                        item = strings.TrimPrefix(item, "alias_prod[")
+                        item = strings.TrimSuffix(item, "]")
+                        if strings.Contains(tmp["prevvalue"].(string), nameVoisin) {
+                                items = append(items, item)
+                        } else if strings.Contains(nameVoisin, "520") {
+                                test520 := strings.Contains(tmp["prevvalue"].(string), "520")
+                                test521 := strings.Contains(tmp["prevvalue"].(string), "521")
+                                test522 := strings.Contains(tmp["prevvalue"].(string), "522")
+                                if test520 || test521 || test522 {
+                                        items = append(items, item)
+                                }
+                        } else if strings.Contains(nameVoisin, "510") {
+                                test510 := strings.Contains(tmp["prevvalue"].(string), "510")
+                                test511 := strings.Contains(tmp["prevvalue"].(string), "511")
+                                test512 := strings.Contains(tmp["prevvalue"].(string), "512")
+                                if test510 || test511 || test512 {
+                                        items = append(items, item)
+                                }
+                        } else if strings.Contains(nameVoisin, "520") {
+                                test500 := strings.Contains(tmp["prevvalue"].(string), "500")
+                                test501 := strings.Contains(tmp["prevvalue"].(string), "501")
+                                test502 := strings.Contains(tmp["prevvalue"].(string), "502")
+                                if test500 || test501 || test502 {
+                                        items = append(items, item)
+                                }
+                        } else if strings.Contains(nameVoisin, "PRDNETRHP") {
+                                if strings.Contains(tmp["prevvalue"].(string), "PRDNETRHP") {
+                                        items = append(items, item)
+                                }
+                        }
+                }
+        }
+        fmt.Println(items)
+        return
+}
+
+func (api *API) GetInterfaceFromItem(nameVoisin string, params Params) (items []string, err error) {
+        if _, present := params["output"]; !present {
+                params["output"] = "extend"
+        }
+        response, err := api.CallWithError("item.get", params)
+        if err != nil {
+                fmt.Println(err.Error())
+                return
+        }
+        result := response.Result.([]interface{})
+        for _, i := range result {
+                tmp := i.(map[string]interface{})
+                if strings.Contains(tmp["key_"].(string), "alias") {
+                       parser := strings.Contains(tmp["prevvalue"].(string), nameVoisin)
+                       p1 := strings.Contains(nameVoisin, "PRDNETRHP")
+                       p2 := strings.Contains(tmp["prevvalue"].(string), "PRDNETRHP")
+                       if ((parser) || ((p1) && (p2))) {
+                                testAlias := strings.Contains(tmp["key_"].(string), "alias_admin")
+                                testAlias2 := strings.Contains(tmp["key_"].(string), "alias_prod")
+                                if ((testAlias) || (testAlias2)) {
+                                        continue
+                                } else {
+                                        itemKey := tmp["key_"].(string)
+                                        itemKey = strings.TrimPrefix(itemKey, "alias[")
+                                        itemKey = strings.TrimPrefix(itemKey, "alias_admin[")
+                                        itemKey = strings.TrimPrefix(itemKey, "alias_prod[")
+                                        itemKey = strings.TrimSuffix(itemKey, "]")
+                                        items = append(items, itemKey)
+                                }
+                        }
+                }
+        }
+        n := len(items)
+        if n == 1 {
+                return
+        } else {
+                var items2 []string
+                for i, _ := range items {
+                        test2 := strings.Contains(items[i], "GigabitEthernet")
+                        if test2  {
+                                test4 := StringInSlice(items2, "Aggregation")
+                                if test4 == false {
+                                        items2 = append(items2, items[i])
+                                }
+                        } else {
+                                test3 := StringInSlice(items2, "GigabitEthernet")
+                                if test3 {
+                                        items2 = nil
+                                }
+                        items2 = append(items2, items[i])
+                        }
+                }
+             items = items2
+        }
+        return
+}
+
+func (api *API) GetNeighbors(params Params) (items3 []string, err error) {
+        if _, present := params["output"]; !present {
+                params["output"] = "extend"
+        }
+        response, err := api.CallWithError("item.get", params)
+        if err != nil {
+                return
+        }
+        result := response.Result.([]interface{})
+        var items2 []string
+        for _, i := range result {
+                tmp := i.(map[string]interface{})
+                if strings.Contains(tmp["key_"].(string), "alias") {
+                        testAlias := strings.Contains(tmp["key_"].(string), "alias_admin")
+                        testAlias2 := strings.Contains(tmp["key_"].(string), "alias_prod")
+                        if ((testAlias) || (testAlias2)) {
+                                continue
+                        } else {
+                                itemKey := tmp["key_"].(string)
+                                itemKey = strings.TrimPrefix(itemKey, "alias[")
+                                itemKey = strings.TrimPrefix(itemKey, "alias_admin[")
+                                itemKey = strings.TrimPrefix(itemKey, "alias_prod[")
+                                itemKey = strings.TrimSuffix(itemKey, "]")
+                                items2 = append(items2, tmp["prevvalue"].(string))
+                        }
+                }
+        }
+        sort.Strings(items2)
+        for i, _ := range items2 {
+                if strings.Contains(items2[i], "Vers") || strings.Contains(items2[i], "LS") || strings.Contains(items2[i], "Portable") || items2[i] == "0" {
+                        continue
+                }
+                element := string(items2[i][0:12])
+                if strings.Contains(element, "PRDNETRHP") {
+                        element = "PRDNETRHP500"
+                }
+                if !StringInSlice(items3, element) {
+                        items3 = append(items3, element)
+                }
+        }
+        return
+}
