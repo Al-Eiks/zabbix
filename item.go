@@ -223,8 +223,8 @@ func SliceContains(slice []string, item string) bool {
 }
 
 func StringInSlice(list []string, a string) bool {
-    for _, b := range list {
-        if strings.Contains(b, a) {
+    for b, _ := range list {
+        if list[b] == a {
             return true
         }
     }
